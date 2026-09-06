@@ -91,9 +91,8 @@ class JustWatchAdapter {
   }
 
   Future<List<Movie>> search(ParsedQuery pq, String country) async {
-    // 「所有国家」：美区发现 + 英/日区补查观看渠道
-    final multiRegion = country == 'ALL';
-    final baseCountry = multiRegion ? 'US' : country;
+    // 「所有国家」用美区索引（目录最全）；地区差异只影响观看渠道，已不展示
+    final baseCountry = country == 'ALL' ? 'US' : country;
 
     final terms = <String>[];
     for (final lang in ['en', 'ja', 'ko']) {
@@ -141,9 +140,6 @@ class JustWatchAdapter {
           m.year != null &&
           !(pq.yearFrom! <= m.year! && m.year! <= (pq.yearTo ?? pq.yearFrom! + 9)));
     }
-    if (multiRegion && movies.isNotEmpty) {
-      await _mergeExtraRegions(movies, terms.first, baseFilter);
-    }
     return movies;
   }
 
@@ -155,46 +151,6 @@ class JustWatchAdapter {
       return [for (final n in nodes) _toMovie(n, pq)];
     } catch (_) {
       return [];
-    }
-  }
-
-  Future<void> _mergeExtraRegions(
-      List<Movie> movies, String mainTerm, Map<String, dynamic> baseFilter) async {
-    final index = <String, Movie>{};
-    for (final m in movies) {
-      for (final k in m.strongKeys) {
-        index.putIfAbsent(k, () => m);
-      }
-      index.putIfAbsent('t|${_normKey(m.title)}|${m.year}', () => m);
-    }
-    for (final region in ['GB', 'JP']) {
-      List<dynamic> nodes;
-      try {
-        nodes = await _fetch({'searchQuery': mainTerm, ...baseFilter}, region,
-            n: 12, record: false);
-      } catch (_) {
-        continue;
-      }
-      for (final node in nodes) {
-        final tmp = _toMovie(node, null);
-        Movie? target;
-        for (final k in tmp.strongKeys) {
-          if (index.containsKey(k)) {
-            target = index[k];
-            break;
-          }
-        }
-        target ??= index['t|${_normKey(tmp.title)}|${tmp.year}'];
-        if (target == null) continue;
-        final seen = target.offers.map((o) => o.dedupKey).toSet();
-        for (final o in tmp.offers) {
-          if (!seen.contains(o.dedupKey)) {
-            target.offers.add(Offer('${o.platform}·$region', o.kind, o.url, o.price));
-            seen.add(o.dedupKey);
-          }
-        }
-        _sortOffers(target.offers);
-      }
     }
   }
 

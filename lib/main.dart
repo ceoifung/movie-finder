@@ -291,8 +291,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
 // ---------------- 结果卡片 ----------------
 
-const _kindLabel = {'free': '免费', 'sub': '订阅', 'rent': '租', 'buy': '买', 'other': '其他'};
-
 class MovieCard extends StatelessWidget {
   final eng.Movie m;
   const MovieCard({super.key, required this.m});
@@ -331,22 +329,18 @@ class MovieCard extends StatelessWidget {
             child: Text(m.overview, maxLines: 2, overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 12, color: kMuted, height: 1.5)),
           ),
-        if (m.offers.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-            child: Wrap(spacing: 6, runSpacing: 6,
-                children: m.offers.take(8).map(_offerChip).toList()),
-          ),
-        if (m.webLinks.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('▶ 在线播放 / 相关网页',
-                  style: TextStyle(fontSize: 11, color: Color(0xFFFF7A45))),
-              const SizedBox(height: 6),
-              ...m.webLinks.map(_webLinkRow),
-            ]),
-          ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('🔗 网页搜索结果',
+                style: TextStyle(fontSize: 11, color: Color(0xFFFF7A45))),
+            const SizedBox(height: 6),
+            if (m.webLinks.isEmpty)
+              const Text('（未获取到，可下拉重试或检查网络）',
+                  style: TextStyle(fontSize: 11, color: kMuted)),
+            ...m.webLinks.map(_webLinkRow),
+          ]),
+        ),
       ]),
     );
   }
@@ -404,40 +398,6 @@ class MovieCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(5)),
     child: Text(s, style: const TextStyle(fontSize: 10, color: kMuted)),
   );
-
-  Widget _offerChip(eng.Offer o) {
-    final color = switch (o.kind) {
-      'free' => kFree, 'sub' => kSub, _ => const Color(0xFFD29922),
-    };
-    return InkWell(
-      onTap: () => openUrl(o.url),
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1C2330),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: kBorder),
-        ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-            decoration: BoxDecoration(
-                color: color.withValues(alpha: .2),
-                borderRadius: BorderRadius.circular(4)),
-            child: Text(_kindLabel[o.kind] ?? o.kind,
-                style: TextStyle(fontSize: 10, color: color)),
-          ),
-          const SizedBox(width: 6),
-          Flexible(child: Text(
-            o.price.isEmpty ? o.platform : '${o.platform} ${o.price}',
-            maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 12),
-          )),
-        ]),
-      ),
-    );
-  }
 
   Widget _webLinkRow(eng.WebLink l) {
     var domain = l.url;

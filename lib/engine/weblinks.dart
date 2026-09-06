@@ -182,8 +182,12 @@ Future<List<WebLink>> _searchDdg(String query) async {
 // ---------------- 相关性校验 + 主入口 ----------------
 
 const _stopWords = {'the', 'movie', 'film', 'watch', 'online', 'series', 'list', 'video'};
+const _movieDomains = [
+  'imdb', 'douban', 'movie.douban', 'rottentomatoes', 'maoyan', 'themoviedb',
+  'letterboxd', 'bilibili', 'taobao', 'iqiyi', 'v.qq', 'youku', 'mgtv',
+];
 
-List<WebLink> _relevant(List<WebLink> links, String zhName, String enName) {
+List<WebLink> _relevant(List<WebLink> links, String zhName, String enName, int? year) {
   bool ok(WebLink l) {
     final t = l.title.replaceAll(RegExp(r'\s+'), '');
     if (zhName.isNotEmpty &&
@@ -197,8 +201,17 @@ List<WebLink> _relevant(List<WebLink> links, String zhName, String enName) {
         .where((w) => w.length >= 3 && !_stopWords.contains(w))
         .toList();
     final strong = words.where((w) => w.length >= 5).toList();
-    final candidates = strong.isNotEmpty ? strong : words;
-    return candidates.any((w) => low.contains(w));
+    final candidates = (strong.isNotEmpty ? strong : words)
+        .where((w) => RegExp('\\b$w\\b').hasMatch(low)) // 词边界匹配，防子串误伤
+        .toList();
+    if (candidates.isEmpty) return false;
+    if (strong.isNotEmpty) return true; // ≥5 字符长词命中即认可
+    // 短词（如 Meg）歧义大：需年份佐证或电影站点域名
+    final m = RegExp(r'https?://([^/]+)').firstMatch(l.url);
+    final domain = (m?.group(1) ?? '').toLowerCase();
+    final isMovieSite = _movieDomains.any((d) => domain.contains(d));
+    final hasYear = year != null && low.contains('$year');
+    return isMovieSite || hasYear;
   }
 
   final hits = links.where(ok).toList();
@@ -210,9 +223,10 @@ typedef _EngineDef = (String, List<String>, Future<List<WebLink>> Function(Strin
 Future<List<WebLink>> searchWebLinks(Movie m, {String? yandexKey}) async {
   final zhName = m.hasCjkTitle ? m.title : (m.originalTitle.isNotEmpty ? m.originalTitle : m.title);
   final enName = m.originalTitle.isNotEmpty ? m.originalTitle : m.title;
+  // 用户要求：罗列片名的网页搜索结果（通用网页优先，在线观看意图作后备关键词）
   final queries = <String, List<String>>{
-    'zh': ['$zhName在线播放', '$zhName电影'],
-    'en': ['${enName}watch online', '${enName}film'],
+    'zh': ['$zhName 电影', '$zhName 在线观看'],
+    'en': ['$enName film', '$enName watch online'],
   };
   final ck = '$_cacheVer|$zhName|${m.year}';
   final now = DateTime.now().millisecondsSinceEpoch;
@@ -234,7 +248,7 @@ Future<List<WebLink>> searchWebLinks(Movie m, {String? yandexKey}) async {
     ];
     for (final q in attempts.take(2)) {
       try {
-        final links = _relevant(await fn(q), zhName, enName);
+        final links = _relevant(await fn(q), zhName, enName, m.year);
         if (links.isEmpty) throw Exception('irrelevant results');
         _record(name, true);
         _linkCache[ck] = [now + _cacheTtl, links];
@@ -248,9 +262,9 @@ Future<List<WebLink>> searchWebLinks(Movie m, {String? yandexKey}) async {
   return [];
 }
 
-/// 为头部影片填充 webLinks（并发 2 + 引擎级节流）
-Future<void> enrichWebLinks(List<Movie> movies, {int limit = 6, String? yandexKey}) async {
-  final sem = Semaphore(2);
+/// 为头部影片填充 webLinks（并发 3 + 引擎级节流）
+Future<void> enrichWebLinks(List<Movie> movies, {int limit = 12, String? yandexKey}) async {
+  final sem = Semaphore(3);
   await Future.wait(movies.take(limit).map((m) async {
     await sem.acquire();
     try {

@@ -8,7 +8,7 @@ const kBrowserUa =
 
 final http.Client sharedClient = http.Client();
 
-const _minInterval = Duration(milliseconds: 1200);
+const _minInterval = Duration(milliseconds: 400); // 个人使用低频场景，节流从宽以提速
 final Map<String, DateTime> _hostLast = {};
 final Map<String, Future<void>> _hostChain = {}; // 每主机的排队链尾
 
@@ -37,13 +37,13 @@ Future<void> throttleHost(String host) {
 /// 带超时的 GET/POST（引擎内所有网络请求统一走这里，杜绝悬挂）
 Future<http.Response> httpGet(Uri uri,
     {Map<String, String>? headers,
-    Duration timeout = const Duration(seconds: 12)}) {
+    Duration timeout = const Duration(seconds: 6)}) {
   return http.get(uri, headers: headers).timeout(timeout);
 }
 
 Future<http.Response> httpPost(Uri uri,
     {Map<String, String>? headers, Object? body,
-    Duration timeout = const Duration(seconds: 12)}) {
+    Duration timeout = const Duration(seconds: 6)}) {
   return http.post(uri, headers: headers, body: body).timeout(timeout);
 }
 

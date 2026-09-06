@@ -58,7 +58,7 @@ class Engine {
     archive = ArchiveAdapter();
     _adapters = [
       _AdapterRef('justwatch', (pq, c) => justwatch.search(pq, c), justwatch.status,
-          timeoutSec: 25), // 多语言(en/ja/ko)+多地区(GB/JP)请求串行节流，需要更长预算
+          timeoutSec: 15), // en/ja/ko 三次请求 + 400ms 节流，预算充足
       _AdapterRef('tmdb', tmdb.enabled ? (pq, c) => tmdb.search(pq, c) : _skip,
           tmdb.status),
       _AdapterRef('whatismymovie', (pq, c) => wimm.search(pq, c), wimm.status,
@@ -155,10 +155,10 @@ class Engine {
     var results = input.freeOnly ? merged.where((m) => m.hasFree).toList() : merged;
     results = results.take(input.limit).toList();
 
-    // 网页链接富集（在线播放链接，Yandex→DDG→Bing）
+    // 网页搜索结果富集（Yandex→DDG→Bing）
     try {
       await enrichWebLinks(results, yandexKey: config.yandexKey)
-          .timeout(const Duration(seconds: 28));
+          .timeout(const Duration(seconds: 20));
     } catch (_) {}
 
     final resp = SearchResponse(
