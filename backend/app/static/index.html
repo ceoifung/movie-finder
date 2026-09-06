@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CreatureFinder · 怪物电影聚合检索</title>
+<style>
+:root{
+  --bg:#0d1117;--panel:#161b22;--panel2:#1c2330;--border:#2d3646;
+  --text:#e6edf3;--muted:#8b949e;--accent:#f02e4c;--accent2:#ff7a45;
+  --free:#2ea862;--sub:#3b82f6;--rent:#d29922;--buy:#8b949e;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;min-height:100vh}
+.wrap{max-width:1200px;margin:0 auto;padding:24px 20px 60px}
+header h1{font-size:26px;letter-spacing:.5px}
+header h1 em{color:var(--accent);font-style:normal}
+header p{color:var(--muted);font-size:13px;margin-top:6px}
+.searchbar{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+.searchbar input[type=text]{flex:1;min-width:260px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 16px;color:var(--text);font-size:15px;outline:none}
+.searchbar input[type=text]:focus{border-color:var(--accent)}
+.searchbar select{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px;color:var(--text);outline:none}
+.searchbar button{background:var(--accent);border:none;border-radius:10px;padding:12px 26px;color:#fff;font-size:15px;font-weight:600;cursor:pointer}
+.searchbar button:hover{background:#d92541}
+.freelabel{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:0 12px;cursor:pointer;user-select:none}
+.freelabel input{accent-color:var(--free)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.chip{background:var(--panel);border:1px solid var(--border);border-radius:999px;padding:6px 14px;font-size:13px;color:var(--muted);cursor:pointer;transition:.15s}
+.chip:hover{color:var(--text);border-color:var(--muted)}
+.chip.on{background:rgba(240,46,76,.15);border-color:var(--accent);color:#ff8598}
+.status{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.pill{font-size:12px;padding:4px 10px;border-radius:6px;background:var(--panel);border:1px solid var(--border);color:var(--muted)}
+.pill b{font-weight:600;color:var(--text)}
+.pill.ok b{color:var(--free)} .pill.bad b{color:var(--accent)} .pill.off{opacity:.45}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px;margin-top:22px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.card .top{display:flex;gap:12px;padding:12px}
+.poster{width:110px;min-height:150px;border-radius:8px;background:var(--panel2);object-fit:cover;flex-shrink:0}
+.ph{width:110px;height:150px;border-radius:8px;background:var(--panel2);display:flex;align-items:center;justify-content:center;font-size:30px;flex-shrink:0}
+.info{flex:1;min-width:0}
+.info h3{font-size:16px;line-height:1.35}
+.info .sub{color:var(--muted);font-size:12px;margin-top:2px}
+.ratings{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.rate{font-size:12px;background:var(--panel2);border-radius:6px;padding:3px 8px}
+.rate.imdb b{color:#f5c518}.rate.tmdb b{color:#01b4e4}.rate.ms b{color:#66cc33}.rate.rt b{color:#fa320a}
+.tags{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.tag{font-size:11px;padding:2px 8px;border-radius:999px;background:rgba(240,46,76,.12);color:#ff8598}
+.tag.g{background:var(--panel2);color:var(--muted)}
+.srcs{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.src{font-size:11px;color:var(--muted);border:1px dashed var(--border);border-radius:6px;padding:2px 7px}
+.overview{padding:0 12px;font-size:12.5px;color:var(--muted);line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.offers{padding:12px;border-top:1px solid var(--border);margin-top:auto;display:flex;flex-wrap:wrap;gap:8px}
+.offers .none{font-size:12px;color:var(--muted)}
+.web{padding:0 12px 12px;display:flex;flex-direction:column;gap:6px}
+.web h4{font-size:12px;color:var(--accent2);font-weight:600;letter-spacing:.5px}
+.wlink{display:flex;align-items:center;gap:8px;text-decoration:none;font-size:13px;color:#7db3ff;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--panel2)}
+.wlink:hover{border-color:#7db3ff;background:#20304a}
+.wlink .dom{margin-left:auto;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px}
+.wlink .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.off{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;padding:7px 12px;border-radius:8px;text-decoration:none;border:1px solid var(--border);color:var(--text);background:var(--panel2)}
+.off:hover{border-color:var(--muted)}
+.off .k{font-size:11px;padding:1px 6px;border-radius:4px;font-weight:600}
+.off.free .k{background:rgba(46,168,98,.2);color:#5ee59a}
+.off.sub .k{background:rgba(59,130,246,.2);color:#7db3ff}
+.off.rent .k,.off.buy .k{background:rgba(210,153,34,.15);color:#e3b341}
+.off .p{color:var(--muted);font-size:11px}
+.empty{color:var(--muted);text-align:center;padding:60px 0;font-size:14px}
+.loading{color:var(--muted);text-align:center;padding:40px 0;font-size:14px}
+footer{margin-top:44px;color:var(--muted);font-size:12px;line-height:1.8;border-top:1px solid var(--border);padding-top:16px}
+a{color:#7db3ff}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🧟 <em>CreatureFinder</em> 怪物电影聚合检索</h1>
+    <p>类型 × 生物 · 多源聚合（JustWatch / Yandex多语言 / TMDB / IMDb / Letterboxd / 烂番茄 / Internet Archive）· 中文查询自动扩展为 中/英/日/韩 四语言深检索 · 附正版观看地址，免费源优先</p>
+  </header>
+
+  <form class="searchbar" id="form">
+    <input type="text" id="q" placeholder="试试：恐怖片 巨型鲨鱼 90年代 / 丧尸 / 雪怪 杀人">
+    <select id="genre"><option value="">全部类型</option></select>
+    <select id="country"></select>
+    <label class="freelabel"><input type="checkbox" id="free"> 仅免费可看</label>
+    <button type="submit">搜 索</button>
+  </form>
+
+  <div class="chips" id="chips"></div>
+  <div class="status" id="status" style="display:none"></div>
+  <div class="loading" id="loading" style="display:none">正在并发检索多个数据源…</div>
+  <div class="empty" id="empty">输入条件或点选下方生物标签开始搜索</div>
+  <div class="grid" id="grid"></div>
+
+  <footer>
+    数据来源：JustWatch（观看渠道与深度链接）、TMDB、IMDb、Letterboxd、烂番茄、Internet Archive（公共领域）。<br>
+    本站仅聚合<b>正版</b>观看渠道信息（含 Tubi / Pluto TV 等免费平台与公共领域影片），不提供盗版资源。<br>
+    This product uses the TMDB API but is not endorsed or certified by TMDB. &nbsp;Streaming data powered by JustWatch.
+  </footer>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const KIND={free:"免费",sub:"订阅",rent:"租",buy:"买",other:"其他"};
+const KINDCLS={free:"free",sub:"sub",rent:"rent",buy:"rent",other:"rent"};
+let TAX=null, picked=new Set();
+
+async function initTaxonomy(){
+  TAX=await (await fetch("/api/taxonomy")).json();
+  const gs=$("#genre");
+  for(const [zh]of Object.entries(TAX.genres)){const o=document.createElement("option");o.value=zh;o.textContent=zh;gs.appendChild(o);}
+  const cs=$("#country");
+  for(const [code,zh]of TAX.countries){const o=document.createElement("option");o.value=code;o.textContent=zh;o.selected=code==="ALL";cs.appendChild(o);}
+  const box=$("#chips");
+  for(const zh of Object.keys(TAX.creatures)){
+    const el=document.createElement("span");el.className="chip";el.textContent=zh;
+    el.onclick=()=>{el.classList.toggle("on");picked.has(zh)?picked.delete(zh):picked.add(zh);};
+    box.appendChild(el);
+  }
+}
+
+function renderStatus(sources){
+  const box=$("#status");box.style.display="flex";
+  box.innerHTML=sources.map(s=>{
+    const [name,st]=Object.entries(s)[0];
+    const cls=st.results>0?"ok":(st.enabled?"bad":"off");
+    const mark=st.results>0?"✓":(st.enabled?"✗":"—");
+    const ms=st.last_latency_ms?` ${Math.round(st.last_latency_ms)}ms`:"";
+    return `<span class="pill ${cls}" title="${esc(st.error||"")}"><b>${mark} ${name}</b>${st.results}条${ms}</span>`;
+  }).join("");
+}
+
+function offerHtml(o){
+  return `<a class="off ${KINDCLS[o.kind]||""}" href="${esc(o.url)}" target="_blank" rel="noopener">
+    <span class="k">${KIND[o.kind]||o.kind}</span>${esc(o.platform)}${o.price?` <span class="p">${esc(o.price)}</span>`:""}</a>`;
+}
+
+function domainOf(u){try{return new URL(u).hostname.replace(/^www\./,"")}catch(e){return u}}
+function renderCard(m){
+  const r=m.ratings||{};
+  const rates=[
+    r.imdb?`<span class="rate imdb">IMDb <b>${r.imdb}</b></span>`:"",
+    r.tmdb?`<span class="rate tmdb">TMDB <b>${r.tmdb}</b></span>`:"",
+    r.metascore?`<span class="rate ms">MC <b>${r.metascore}</b></span>`:"",
+    r.rt?`<span class="rate rt">🍅 <b>${r.rt}%</b></span>`:""
+  ].join("");
+  const tags=[...(m.creatures||[]).map(c=>`<span class="tag">${esc(c)}</span>`),
+              ...(m.genres||[]).slice(0,3).map(g=>`<span class="tag g">${esc(g)}</span>`)].join("");
+  const srcs=(m.sources||[]).map(s=>`<span class="src">${s}</span>`).join("");
+  const poster=m.poster?`<img class="poster" loading="lazy" src="${esc(m.poster)}" onerror="this.outerHTML='<div class=&quot;ph&quot;>🎬</div>'">`
+                       :`<div class="ph">🎬</div>`;
+  const offers=(m.offers&&m.offers.length)?m.offers.map(offerHtml).join("")+
+      (m.links&&m.links.JustWatch?`<a class="off" href="${esc(m.links.JustWatch)}" target="_blank" rel="noopener">全部渠道 ↗</a>`:"")
+      :`<span class="none">该地区暂无渠道</span>`+(m.links&&m.links.JustWatch?` <a class="off" href="${esc(m.links.JustWatch)}" target="_blank" rel="noopener">去 JustWatch 查 ↗</a>`:"");
+  const webLinks=(m.web_links&&m.web_links.length)
+    ? `<div class="web"><h4>▶ 在线播放 / 相关网页（搜索引擎检索）</h4>`+
+      m.web_links.map(l=>`<a class="wlink" href="${esc(l.url)}" target="_blank" rel="noopener"><span class="t">${esc(l.title||l.url)}</span><span class="dom">${esc(domainOf(l.url))}</span></a>`).join("")+
+      `</div>`:"";
+  return `<div class="card">
+    <div class="top">${poster}
+      <div class="info">
+        <h3>${esc(m.title)}${m.year?` <span style="color:var(--muted);font-size:13px">(${m.year})</span>`:""}</h3>
+        <div class="sub">${esc(m.original_title||"")}${m.imdb_id?` · ${esc(m.imdb_id)}`:""}</div>
+        <div class="ratings">${rates}</div>
+        <div class="tags">${tags}</div>
+        <div class="srcs">${srcs}</div>
+      </div>
+    </div>
+    ${m.overview?`<div class="overview">${esc(m.overview)}</div>`:""}
+    <div class="offers">${offers}</div>
+    ${webLinks}
+  </div>`;
+}
+
+async function doSearch(){
+  const params=new URLSearchParams();
+  const q=$("#q").value.trim();
+  if(q)params.set("q",q);
+  if($("#genre").value)params.set("genre",$("#genre").value);
+  picked.forEach(c=>params.append("creature",c));
+  params.set("country",$("#country").value);
+  if($("#free").checked)params.set("free","true");
+  if(!params.get("q")&&!params.getAll("creature").length&&!params.get("genre"))return;
+
+  $("#loading").style.display="block";$("#grid").innerHTML="";$("#empty").style.display="none";
+  try{
+    const data=await fetch("/api/search?"+params.toString()).then(r=>r.json());
+    $("#loading").style.display="none";
+    if(data.error){$("#empty").textContent=data.error;$("#empty").style.display="block";return;}
+    if(data.sources)renderStatus(data.sources);
+    if(!data.results.length){$("#empty").textContent="没有找到符合条件的影片，试试放宽条件（如去掉年代、切换地区）";$("#empty").style.display="block";return;}
+    $("#grid").innerHTML=data.results.map(renderCard).join("");
+  }catch(e){
+    $("#loading").style.display="none";
+    $("#empty").textContent="检索失败："+e;$("#empty").style.display="block";
+  }
+}
+
+$("#form").addEventListener("submit",e=>{e.preventDefault();doSearch();});
+initTaxonomy();
+</script>
+</body>
+</html>
