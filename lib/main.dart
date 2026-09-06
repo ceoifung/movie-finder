@@ -88,6 +88,14 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _loading = false;
   String? _error;
 
+  bool _allSourcesFailed() {
+    if (_resp == null || _resp!.sources.isEmpty) return false;
+    return _resp!.sources.every((s) {
+      final st = s.values.first as Map<String, dynamic>;
+      return (st['results'] ?? 0) == 0 && (st['status'] != 'idle');
+    });
+  }
+
   Future<void> _doSearch() async {
     if (_qCtrl.text.trim().isEmpty && _picked.isEmpty && (_genre == null || _genre!.isEmpty)) {
       return;
@@ -145,7 +153,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     ? const Center(child: Text('输入条件或点选生物标签开始搜索\n所有检索都在手机本地完成，无需服务器',
                         textAlign: TextAlign.center, style: TextStyle(color: kMuted, height: 1.8)))
                     : _resp!.results.isEmpty
-                        ? const Center(child: Text('没有找到符合条件的影片', style: TextStyle(color: kMuted)))
+                        ? Center(child: Text(
+                            _allSourcesFailed()
+                                ? '所有数据源都失败了：请检查手机网络是否能访问外网\n'
+                                  '（需科学上网的环境请先开启）\n\n上方状态条可看各源错误详情'
+                                : '没有找到符合条件的影片，试试放宽条件',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: kMuted, height: 1.8)))
                         : ListView.builder(
                             padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
                             itemCount: _resp!.results.length,

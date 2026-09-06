@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- release 构建的必需权限：Flutter 模板只在 debug/profile 清单里声明 INTERNET，
+         主清单缺失会导致 release APK 所有网络请求失败 -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="怪物电影检索"
         android:usesCleartextTraffic="true"
