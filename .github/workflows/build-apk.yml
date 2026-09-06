@@ -9,6 +9,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # 创建 Release（打 tag 时）需要写权限
     steps:
       - uses: actions/checkout@v4
 
