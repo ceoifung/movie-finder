@@ -2,7 +2,6 @@
 // 后端：movie-finder（FastAPI），默认地址可在设置里修改。
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
