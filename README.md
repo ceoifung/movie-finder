@@ -1,32 +1,44 @@
-# CreatureFinder APP（Flutter）
+# CreatureFinder APP（纯 Flutter 客户端版）
 
-「怪物电影聚合检索」移动端：类型 × 生物标签 × 多语言检索，结果卡片附
-观看渠道（免费优先）和搜索引擎抓取的在线播放网页链接（可点击）。
+「怪物电影聚合检索」安卓 APP：**所有检索引擎都在手机本地运行，不需要任何服务器**。
+类型 × 生物标签 × 中/英/日/韩四语言检索，结果卡片附观看渠道（免费优先）和
+搜索引擎抓取的在线播放网页链接（可点击），中文译名优先显示。
+
+## 架构（纯客户端）
+
+```
+lib/main.dart            UI：搜索/标签/筛选/结果卡片/设置（可选 key）
+lib/engine/
+  ├─ taxonomy.dart       生物本体库（26类×四语言+同义词+场景/实体/年代解析）
+  ├─ aggregator.dart     并发扇出→归一化→去重合并→排序→缓存
+  ├─ justwatch.dart      核心：GraphQL 检索+中文译名+繁转简+观看渠道+多地区合并
+  ├─ wimm.dart           WhatIsMyMovie 语义通道（描述式查询，网页免key）
+  ├─ scrapers.dart       IMDb / Letterboxd / Internet Archive / TMDB(可选key)
+  ├─ weblinks.dart       在线播放链接：Yandex→DDG→Bing 引擎链+相关性校验
+  ├─ translate.dart      MyMemory 免费翻译 + t2s.dart 繁简表(4057字)
+  └─ http.dart           共享客户端+主机节流+信号量（防反爬/防悬挂）
+backend/                 原服务端版（保留作参考，APP 已不需要它）
+```
 
 ## 构建
 
 ```bash
-# 国内镜像
-export PUB_HOSTED_URL=https://pub.flutter-io.cn
+export PUB_HOSTED_URL=https://pub.flutter-io.cn   # 国内镜像
 export FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn
 flutter pub get
-flutter build apk --release     # 产物: build/app/outputs/flutter-apk/app-release.apk
+flutter test                     # 8 个单测（本体/繁简/合并去重）
+dart run tool/smoke_test.dart    # 真实网络冒烟（可选）
+flutter build apk --release      # 产物: build/app/outputs/flutter-apk/app-release.apk
 ```
 
-要求：Flutter 3.x + Android SDK 35 + JDK 17。
-
-## 使用
-
-1. 先启动后端（movie-finder 项目）：
-   `.venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8300`
-2. 手机与后端同一网络，APP 右上角「设置」填后端地址：
-   - 真机（局域网）：`http://<电脑内网IP>:8300`
-   - Android 模拟器：`http://10.0.2.2:8300`（默认值）
-3. 「测试连接」通过后保存，即可搜索。
+或直接推送仓库，GitHub Actions 自动构建（打 tag 自动发 Release 附 APK）。
 
 ## 说明
 
-- release APK 使用 debug 签名（可直接安装），上架商店需换成正式签名 keystore；
-- 后端地址持久化在本地（shared_preferences）；
-- Android 9+ 不允许明文 HTTP？本项目 targetSDK 已配置允许 HTTP（仅开发用途），
-  正式部署后端请上 HTTPS 并移除 `android:usesCleartextTraffic`。
+- 无 key 可用；设置里可选填 TMDB key（中文片名更全）、Yandex key（免验证码），
+  key 只存手机本地；
+- 沙盒/数据中心 IP 下 IMDb/Letterboxd/Yandex 会被反爬（引擎自动降级），
+  手机住宅网络下这些源可直接工作；
+- release APK 为 debug 签名（可直接安装），上架需换正式 keystore；
+- 实测：搜「巨型鲨鱼」返回 24 条（巨齿鲨 34 个观看渠道/大白鲨 12 个），
+  首次搜索较慢（多源串行节流），相同查询走缓存秒回。
